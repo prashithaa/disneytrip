@@ -1,0 +1,340 @@
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --mk:#1a56a0;--mk-light:#e6f1fb;--epic:#6c3fc7;--epic-light:#eeedfe;
+    --green:#1D9E75;--green-light:#E1F5EE;--amber:#BA7517;--amber-light:#FAEEDA;
+    --red:#A32D2D;--red-light:#FCEBEB;
+  }
+  body{font-family:var(--font-sans,system-ui,sans-serif);font-size:14px;color:var(--color-text-primary)}
+  .app{max-width:100%;padding:0}
+  .tabs{display:flex;gap:0;border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:1.25rem}
+  .tab{padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--color-text-secondary);border-bottom:2px solid transparent;transition:all .15s}
+  .tab.active-mk{color:var(--mk);border-bottom-color:var(--mk)}
+  .tab.active-epic{color:var(--epic);border-bottom-color:var(--epic)}
+  .tab:hover{color:var(--color-text-primary)}
+  .panel{display:none}.panel.active{display:block}
+  .live-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+  .live-title{font-size:15px;font-weight:500}
+  .refresh-btn{font-size:12px;padding:6px 14px;cursor:pointer;border-radius:var(--border-radius-md);background:transparent;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary)}
+  .refresh-btn:hover{background:var(--color-background-secondary)}
+  .last-updated{font-size:11px;color:var(--color-text-secondary)}
+  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
+  .stat-pill{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500}
+  .pill-green{background:var(--green-light);color:#085041}
+  .pill-amber{background:var(--amber-light);color:#633806}
+  .pill-red{background:var(--red-light);color:#791F1F}
+  .pill-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .search-box{width:100%;padding:8px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;margin-bottom:1rem}
+  .lands-container{display:flex;flex-direction:column;gap:1rem}
+  .land-section{}
+  .land-name{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding-bottom:4px;border-bottom:0.5px solid var(--color-border-tertiary)}
+  .rides-grid{display:flex;flex-direction:column;gap:4px}
+  .ride-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;transition:background .1s}
+  .ride-row:hover{background:var(--color-background-secondary)}
+  .ride-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+  .ride-name{font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .plan-tag{font-size:10px;padding:2px 6px;border-radius:10px;background:var(--mk-light);color:var(--mk);white-space:nowrap}
+  .plan-tag.epic{background:var(--epic-light);color:var(--epic)}
+  .wait-badge{font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;white-space:nowrap;min-width:60px;text-align:center}
+  .wait-low{background:var(--green-light);color:#085041}
+  .wait-mid{background:var(--amber-light);color:#633806}
+  .wait-high{background:var(--red-light);color:#791F1F}
+  .wait-closed{background:var(--color-background-secondary);color:var(--color-text-secondary)}
+  .loading-msg{text-align:center;padding:2rem;color:var(--color-text-secondary);font-size:13px}
+  .error-msg{text-align:center;padding:1.5rem;color:var(--color-text-secondary);font-size:13px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)}
+  .error-msg a{color:var(--mk);text-decoration:none}
+  .plan-section{margin-top:1.5rem;border-top:0.5px solid var(--color-border-secondary);padding-top:1.25rem}
+  .plan-header{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:.75rem}
+  .itinerary{display:flex;flex-direction:column;gap:6px}
+  .itin-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary)}
+  .itin-row.highlight{border-color:var(--mk);background:var(--mk-light)}
+  .itin-row.highlight.epic-h{border-color:var(--epic);background:var(--epic-light)}
+  .itin-time{font-size:11px;font-weight:500;color:var(--color-text-secondary);min-width:60px;padding-top:1px}
+  .itin-content{flex:1}
+  .itin-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+  .itin-desc{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
+  .itin-wait{font-size:11px;font-weight:500;margin-top:3px}
+  .wait-live{color:var(--green);} .wait-live.mid{color:var(--amber)} .wait-live.high{color:var(--red)}
+  .legend-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1rem;font-size:11px;color:var(--color-text-secondary)}
+  .legend-item{display:flex;align-items:center;gap:5px}
+  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .powered{font-size:10px;color:var(--color-text-secondary);margin-top:1rem;text-align:center}
+  .powered a{color:var(--color-text-secondary)}
+  .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+  .filter-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
+  .filter-btn.active{background:var(--mk-light);color:var(--mk);border-color:var(--mk)}
+  .filter-btn.active.epic-f{background:var(--epic-light);color:var(--epic);border-color:var(--epic)}
+  .section-toggle{font-size:11px;color:var(--color-text-secondary);cursor:pointer;float:right}
+</style>
+
+<div class="app">
+  <div class="tabs">
+    <button class="tab active-mk" onclick="showPanel('mk',this)">Day 1 — Magic Kingdom</button>
+    <button class="tab" onclick="showPanel('epic',this)">Day 2 — Epic Universe</button>
+  </div>
+
+  <div id="panel-mk" class="panel active">
+    <div class="live-header">
+      <span class="live-title">Live Wait Times — Magic Kingdom</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="last-updated" id="mk-updated">Tap refresh to load</span>
+        <button class="refresh-btn" onclick="loadWaitTimes('mk')">Refresh</button>
+      </div>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:#1D9E75"></span>Under 30 min</span>
+      <span class="legend-item"><span class="dot" style="background:#BA7517"></span>30–60 min</span>
+      <span class="legend-item"><span class="dot" style="background:#A32D2D"></span>Over 60 min</span>
+      <span class="legend-item"><span class="dot" style="background:var(--color-border-secondary)"></span>Closed</span>
+    </div>
+    <div class="status-bar" id="mk-stats"></div>
+    <input class="search-box" type="text" placeholder="Search rides..." oninput="filterRides('mk',this.value)" id="mk-search">
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('mk','all',this)">All rides</button>
+      <button class="filter-btn" onclick="setFilter('mk','low',this)">Short wait</button>
+      <button class="filter-btn" onclick="setFilter('mk','open',this)">Open only</button>
+      <button class="filter-btn" onclick="setFilter('mk','plan',this)">In your plan</button>
+    </div>
+    <div id="mk-rides"><div class="loading-msg">Tap "Refresh" to load live wait times from Magic Kingdom</div></div>
+
+    <div class="plan-section">
+      <div class="plan-header">Your Day 1 Itinerary — with live waits</div>
+      <div class="itinerary" id="mk-itinerary"></div>
+    </div>
+    <div class="powered"><a href="https://queue-times.com/en-US" target="_blank">Powered by Queue-Times.com</a></div>
+  </div>
+
+  <div id="panel-epic" class="panel">
+    <div class="live-header">
+      <span class="live-title">Live Wait Times — Epic Universe</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="last-updated" id="epic-updated">Tap refresh to load</span>
+        <button class="refresh-btn" onclick="loadWaitTimes('epic')">Refresh</button>
+      </div>
+    </div>
+    <div class="legend-row">
+      <span class="legend-item"><span class="dot" style="background:#1D9E75"></span>Under 30 min</span>
+      <span class="legend-item"><span class="dot" style="background:#BA7517"></span>30–60 min</span>
+      <span class="legend-item"><span class="dot" style="background:#A32D2D"></span>Over 60 min</span>
+      <span class="legend-item"><span class="dot" style="background:var(--color-border-secondary)"></span>Closed</span>
+    </div>
+    <div class="status-bar" id="epic-stats"></div>
+    <input class="search-box" type="text" placeholder="Search rides..." oninput="filterRides('epic',this.value)" id="epic-search">
+    <div class="filter-row">
+      <button class="filter-btn active epic-f" onclick="setFilter('epic','all',this)">All rides</button>
+      <button class="filter-btn" onclick="setFilter('epic','low',this)">Short wait</button>
+      <button class="filter-btn" onclick="setFilter('epic','open',this)">Open only</button>
+      <button class="filter-btn" onclick="setFilter('epic','plan',this)">In your plan</button>
+    </div>
+    <div id="epic-rides"><div class="loading-msg">Tap "Refresh" to load live wait times from Epic Universe</div></div>
+
+    <div class="plan-section">
+      <div class="plan-header">Your Day 2 Itinerary — with live waits</div>
+      <div class="itinerary" id="epic-itinerary"></div>
+    </div>
+    <div class="powered"><a href="https://queue-times.com/en-US" target="_blank">Powered by Queue-Times.com</a></div>
+  </div>
+</div>
+
+<script>
+const PARK_IDS = { mk: 6, epic: 481 };
+const activePanel = { current: 'mk' };
+const filters = { mk: 'all', epic: 'all' };
+const rideData = { mk: [], epic: [] };
+
+const MK_PLAN_RIDES = [
+  'Seven Dwarfs Mine Train','Peter Pan\'s Flight','Haunted Mansion','Pirates of the Caribbean',
+  'Jungle Cruise','Space Mountain','TRON Lightcycle / Run','Big Thunder Mountain Railroad',
+  'Buzz Lightyear\'s Space Ranger Spin','Splash Mountain'
+];
+const EPIC_PLAN_RIDES = [
+  'Mario Kart: Bowser\'s Challenge','Harry Potter and the Battle at the Ministry',
+  'Monsters Unchained: The Frankenstein Experiment','How to Train Your Dragon: Isle of Berk',
+  'Stardust Racers'
+];
+
+const MK_ITINERARY = [
+  {time:'9:00 AM', title:'Seven Dwarfs Mine Train', desc:'Fantasyland — go here first at rope drop', ride:'Seven Dwarfs Mine Train', highlight:true},
+  {time:'9:30 AM', title:"Peter Pan's Flight", desc:'Fantasyland — short walk from Seven Dwarfs', ride:"Peter Pan's Flight", highlight:true},
+  {time:'10:15 AM', title:'Haunted Mansion', desc:'Liberty Square — iconic dark ride, great for everyone', ride:'Haunted Mansion'},
+  {time:'10:45 AM', title:'Pirates of the Caribbean', desc:'Adventureland — dad\'s favorite type of ride', ride:'Pirates of the Caribbean'},
+  {time:'11:15 AM', title:'Jungle Cruise', desc:'Adventureland — funny narrated boat tour', ride:'Jungle Cruise'},
+  {time:'12:30 PM', title:'Lunch', desc:'Be Our Guest or Columbia Harbour House', ride:null},
+  {time:'1:30 PM', title:'TRON Lightcycle / Run', desc:'Tomorrowland — best ride in park, use Lightning Lane', ride:'TRON Lightcycle / Run', highlight:true},
+  {time:'2:15 PM', title:'Space Mountain', desc:'Tomorrowland — classic indoor coaster', ride:'Space Mountain'},
+  {time:'3:30 PM', title:'Big Thunder Mountain Railroad', desc:'Frontierland — mild coaster, fun for all', ride:'Big Thunder Mountain Railroad'},
+  {time:'5:00 PM', title:'Dinner', desc:'Skipper Canteen or Crystal Palace', ride:null},
+  {time:'8:30 PM', title:'Grab your spot on Main Street', desc:'Get a good view of Cinderella Castle', ride:null, highlight:true},
+  {time:'9:00 PM', title:'Happily Ever After Fireworks', desc:'Best fireworks show at any theme park — do NOT miss!', ride:null, highlight:true},
+];
+
+const EPIC_ITINERARY = [
+  {time:'10:00 AM', title:'Mario Kart: Bowser\'s Challenge', desc:'Super Nintendo World — head here first at opening', ride:"Mario Kart: Bowser's Challenge", highlight:true},
+  {time:'11:00 AM', title:'Explore Nintendo World', desc:'Collect coins with Power-Up Band, meet characters', ride:null},
+  {time:'11:30 AM', title:'Harry Potter: Battle at the Ministry', desc:'Ministry of Magic — next most popular', ride:"Harry Potter and the Battle at the Ministry", highlight:true},
+  {time:'12:30 PM', title:'Explore Parisian streets', desc:'Dad explores 1920s Paris while others browse shops', ride:null},
+  {time:'1:00 PM', title:'Lunch', desc:'Café L\'Air de la Sirène or Das Steakhaus', ride:null},
+  {time:'2:30 PM', title:'How to Train Your Dragon', desc:'Isle of Berk — dragon coaster + live shows', ride:"How to Train Your Dragon: Isle of Berk"},
+  {time:'3:30 PM', title:'Monsters Unchained', desc:'Dark Universe — intense thrill ride', ride:"Monsters Unchained: The Frankenstein Experiment"},
+  {time:'4:30 PM', title:'Explore Dark Universe', desc:'Gothic architecture + monster makeup experience ($45)', ride:null},
+  {time:'5:30 PM', title:'Dinner', desc:'Das Steakhaus or Mead Hall', ride:null},
+  {time:'7:00 PM', title:'Stardust Racers', desc:'Celestial Park — ride at lower evening wait times', ride:'Stardust Racers'},
+  {time:'8:00 PM', title:'Celestial Park at dusk', desc:'The central hub transforms beautifully at night', ride:null, highlight:true},
+];
+
+function showPanel(park, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active-mk','active-epic')});
+  document.getElementById('panel-'+park).classList.add('active');
+  btn.classList.add(park==='mk'?'active-mk':'active-epic');
+  activePanel.current = park;
+}
+
+function setFilter(park, f, btn) {
+  filters[park] = f;
+  btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active','epic-f'));
+  btn.classList.add('active');
+  if(park==='epic') btn.classList.add('epic-f');
+  renderRides(park);
+}
+
+function waitClass(wait, open) {
+  if(!open || wait===0) return 'wait-closed';
+  if(wait<30) return 'wait-low';
+  if(wait<60) return 'wait-mid';
+  return 'wait-high';
+}
+
+function waitText(wait, open) {
+  if(!open) return 'Closed';
+  if(wait===0) return 'Walk on';
+  return wait+' min';
+}
+
+function isInPlan(name, park) {
+  const list = park==='mk' ? MK_PLAN_RIDES : EPIC_PLAN_RIDES;
+  return list.some(r=>name.toLowerCase().includes(r.toLowerCase().slice(0,10)));
+}
+
+function renderRides(park) {
+  const search = document.getElementById(park+'-search').value.toLowerCase();
+  const filter = filters[park];
+  const data = rideData[park];
+  const container = document.getElementById(park+'-rides');
+  if(!data.length){container.innerHTML='<div class="loading-msg">No data yet — tap Refresh</div>';return;}
+
+  const allRides = data.flatMap(land=>
+    land.rides.map(r=>({...r, land:land.name}))
+  );
+
+  let filtered = allRides;
+  if(search) filtered=filtered.filter(r=>r.name.toLowerCase().includes(search));
+  if(filter==='low') filtered=filtered.filter(r=>r.is_open && r.wait_time<30);
+  if(filter==='open') filtered=filtered.filter(r=>r.is_open);
+  if(filter==='plan') filtered=filtered.filter(r=>isInPlan(r.name,park));
+
+  const byLand = {};
+  filtered.forEach(r=>{
+    if(!byLand[r.land]) byLand[r.land]=[];
+    byLand[r.land].push(r);
+  });
+
+  if(!filtered.length){container.innerHTML='<div class="loading-msg">No rides match this filter</div>';return;}
+
+  container.innerHTML = Object.entries(byLand).map(([land,rides])=>`
+    <div class="land-section">
+      <div class="land-name">${land}</div>
+      <div class="rides-grid">
+        ${rides.map(r=>`
+          <div class="ride-row">
+            <div class="ride-left">
+              <span class="ride-name">${r.name}</span>
+              ${isInPlan(r.name,park)?`<span class="plan-tag ${park==='epic'?'epic':''}">In your plan</span>`:''}
+            </div>
+            <span class="wait-badge ${waitClass(r.wait_time,r.is_open)}">${waitText(r.wait_time,r.is_open)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderStats(park) {
+  const data = rideData[park];
+  const allRides = data.flatMap(l=>l.rides);
+  const open = allRides.filter(r=>r.is_open);
+  const low = open.filter(r=>r.wait_time<30).length;
+  const high = open.filter(r=>r.wait_time>=60).length;
+  const avg = open.length ? Math.round(open.reduce((s,r)=>s+r.wait_time,0)/open.length) : 0;
+  document.getElementById(park+'-stats').innerHTML=`
+    <span class="stat-pill pill-gray">${open.length}/${allRides.length} rides open</span>
+    <span class="stat-pill pill-green">${low} short waits</span>
+    <span class="stat-pill ${high>5?'pill-red':'pill-amber'}">${high} long waits</span>
+    <span class="stat-pill pill-gray">Avg: ${avg} min</span>
+  `;
+}
+
+function renderItinerary(park) {
+  const items = park==='mk' ? MK_ITINERARY : EPIC_ITINERARY;
+  const allRides = rideData[park].flatMap(l=>l.rides);
+  const container = document.getElementById(park+'-itinerary');
+  const isEpic = park==='epic';
+
+  container.innerHTML = items.map(item=>{
+    let waitHtml='';
+    if(item.ride && allRides.length) {
+      const match = allRides.find(r=>r.name.toLowerCase().includes(item.ride.toLowerCase().slice(0,12)));
+      if(match){
+        const wc = waitClass(match.wait_time, match.is_open);
+        const wt = waitText(match.wait_time, match.is_open);
+        const cls = wc==='wait-low'?'':'wait-live '+(wc==='wait-mid'?'mid':'high');
+        waitHtml=`<div class="itin-wait wait-live ${cls}">Live wait: ${wt}</div>`;
+      }
+    }
+    return `
+      <div class="itin-row ${item.highlight?(isEpic?'highlight epic-h':'highlight'):''}">
+        <div class="itin-time">${item.time}</div>
+        <div class="itin-content">
+          <div class="itin-title">${item.title}</div>
+          <div class="itin-desc">${item.desc}</div>
+          ${waitHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function loadWaitTimes(park) {
+  const id = PARK_IDS[park];
+  const updEl = document.getElementById(park+'-updated');
+  const ridesEl = document.getElementById(park+'-rides');
+  updEl.textContent = 'Loading...';
+  ridesEl.innerHTML='<div class="loading-msg">Fetching live wait times...</div>';
+
+  try {
+    const res = await fetch(`https://queue-times.com/parks/${id}/queue_times.json`);
+    if(!res.ok) throw new Error('API error');
+    const json = await res.json();
+    rideData[park] = json.lands || [];
+    if(json.rides && json.rides.length) {
+      rideData[park].push({name:'Other Attractions', rides:json.rides});
+    }
+    const now = new Date();
+    updEl.textContent = 'Updated '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    renderStats(park);
+    renderRides(park);
+    renderItinerary(park);
+  } catch(e) {
+    ridesEl.innerHTML=`<div class="error-msg">
+      Could not load live wait times. This may be because the park is currently closed or the API is temporarily unavailable.<br><br>
+      Check live waits directly at <a href="https://queue-times.com/en-US/parks/${id}/queue_times" target="_blank">Queue-Times.com</a> or the 
+      <a href="https://disneyworld.disney.go.com/en_CA/experience-updates/magic-kingdom/" target="_blank">My Disney Experience app</a>.
+    </div>`;
+    updEl.textContent='Failed to load';
+  }
+}
+
+renderItinerary('mk');
+renderItinerary('epic');
+</script>
