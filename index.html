@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Orlando Planner">
 <title>Orlando Trip Planner</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 /* ── RESET & SAFARI FIXES ── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -338,11 +339,8 @@ input{-webkit-appearance:none;appearance:none;font-family:inherit;font-size:16px
     <!-- SCREEN: MAP -->
     <div class="screen" id="screen-map">
       <div class="map-container">
-        <iframe id="map-frame" class="map-iframe"
-          src="https://www.openstreetmap.org/export/embed.html?bbox=-81.5870%2C28.4150%2C-81.5750%2C28.4220&layer=mapnik&marker=28.4178%2C-81.5812"
-          allowfullscreen loading="lazy">
-        </iframe>
-        <div class="map-card" id="map-card" style="display:none">
+        <div id="leaflet-map" style="width:100%;height:100%;z-index:1"></div>
+        <div class="map-card" id="map-card" style="display:none;z-index:10;position:absolute;bottom:16px;left:12px;right:12px">
           <div class="map-card-title" id="mc-title">—</div>
           <div class="map-card-meta" id="mc-meta"></div>
           <div class="map-card-wait" id="mc-wait"></div>
@@ -350,7 +348,7 @@ input{-webkit-appearance:none;appearance:none;font-family:inherit;font-size:16px
             Open in Maps for Directions ↗
           </button>
         </div>
-        <div class="map-card" id="map-hint" style="background:rgba(255,255,255,.95)">
+        <div class="map-card" id="map-hint" style="background:rgba(255,255,255,.95);z-index:10;position:absolute;bottom:16px;left:12px;right:12px">
           <div style="font-size:14px;font-weight:600;margin-bottom:4px">🗺️ Park Map</div>
           <div style="font-size:12px;color:var(--muted)">Tap any ride in <strong>Live Waits</strong> or <strong>Itinerary</strong> to zoom here and get navigation.</div>
         </div>
@@ -561,10 +559,9 @@ function switchPark(park,btn){
   document.getElementById('waits-title').textContent=p.name+' — Live Waits';
   document.getElementById('itin-title').textContent=(park==='mk'?'Day 1':'Day 2')+' — '+p.name;
 
-  // map reset
+  // map reset to park center
   const p2=PARKS[park];
-  document.getElementById('map-frame').src=
-    `https://www.openstreetmap.org/export/embed.html?bbox=${p2.bbox}&layer=mapnik&marker=${p2.lat},${p2.lng}`;
+  resetLeafletMap(p2.lat, p2.lng);
   document.getElementById('map-card').style.display='none';
   document.getElementById('map-hint').style.display='block';
   document.getElementById('mc-nav-btn').className='open-maps-btn '+p.navCls;
@@ -702,12 +699,8 @@ function openMap(name,coords){
   document.getElementById('map-card').style.display='block';
   document.getElementById('map-hint').style.display='none';
 
-  // update iframe — OpenStreetMap (no API key needed, works on all browsers)
-  const zoom=18;
-  const half=0.002;
-  const bbox=`${coords[1]-half},${coords[0]-half},${coords[1]+half},${coords[0]+half}`;
-  document.getElementById('map-frame').src=
-    `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${coords[0]},${coords[1]}`;
+  // update Leaflet map
+  updateLeafletMap(coords[0], coords[1], name);
 
   // switch to map screen
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -802,282 +795,123 @@ function renderSuggest(){
 renderItin();
 renderSuggest();
 </script>
-</body>
-</html>  .powered a{color:var(--color-text-secondary)}
-  .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
-  .filter-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
-  .filter-btn.active{background:var(--mk-light);color:var(--mk);border-color:var(--mk)}
-  .filter-btn.active.epic-f{background:var(--epic-light);color:var(--epic);border-color:var(--epic)}
-  .section-toggle{font-size:11px;color:var(--color-text-secondary);cursor:pointer;float:right}
-</style>
 
-<div class="app">
-  <div class="tabs">
-    <button class="tab active-mk" onclick="showPanel('mk',this)">Day 1 — Magic Kingdom</button>
-    <button class="tab" onclick="showPanel('epic',this)">Day 2 — Epic Universe</button>
-  </div>
-
-  <div id="panel-mk" class="panel active">
-    <div class="live-header">
-      <span class="live-title">Live Wait Times — Magic Kingdom</span>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="last-updated" id="mk-updated">Tap refresh to load</span>
-        <button class="refresh-btn" onclick="loadWaitTimes('mk')">Refresh</button>
-      </div>
-    </div>
-    <div class="legend-row">
-      <span class="legend-item"><span class="dot" style="background:#1D9E75"></span>Under 30 min</span>
-      <span class="legend-item"><span class="dot" style="background:#BA7517"></span>30–60 min</span>
-      <span class="legend-item"><span class="dot" style="background:#A32D2D"></span>Over 60 min</span>
-      <span class="legend-item"><span class="dot" style="background:var(--color-border-secondary)"></span>Closed</span>
-    </div>
-    <div class="status-bar" id="mk-stats"></div>
-    <input class="search-box" type="text" placeholder="Search rides..." oninput="filterRides('mk',this.value)" id="mk-search">
-    <div class="filter-row">
-      <button class="filter-btn active" onclick="setFilter('mk','all',this)">All rides</button>
-      <button class="filter-btn" onclick="setFilter('mk','low',this)">Short wait</button>
-      <button class="filter-btn" onclick="setFilter('mk','open',this)">Open only</button>
-      <button class="filter-btn" onclick="setFilter('mk','plan',this)">In your plan</button>
-    </div>
-    <div id="mk-rides"><div class="loading-msg">Tap "Refresh" to load live wait times from Magic Kingdom</div></div>
-
-    <div class="plan-section">
-      <div class="plan-header">Your Day 1 Itinerary — with live waits</div>
-      <div class="itinerary" id="mk-itinerary"></div>
-    </div>
-    <div class="powered"><a href="https://queue-times.com/en-US" target="_blank">Powered by Queue-Times.com</a></div>
-  </div>
-
-  <div id="panel-epic" class="panel">
-    <div class="live-header">
-      <span class="live-title">Live Wait Times — Epic Universe</span>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="last-updated" id="epic-updated">Tap refresh to load</span>
-        <button class="refresh-btn" onclick="loadWaitTimes('epic')">Refresh</button>
-      </div>
-    </div>
-    <div class="legend-row">
-      <span class="legend-item"><span class="dot" style="background:#1D9E75"></span>Under 30 min</span>
-      <span class="legend-item"><span class="dot" style="background:#BA7517"></span>30–60 min</span>
-      <span class="legend-item"><span class="dot" style="background:#A32D2D"></span>Over 60 min</span>
-      <span class="legend-item"><span class="dot" style="background:var(--color-border-secondary)"></span>Closed</span>
-    </div>
-    <div class="status-bar" id="epic-stats"></div>
-    <input class="search-box" type="text" placeholder="Search rides..." oninput="filterRides('epic',this.value)" id="epic-search">
-    <div class="filter-row">
-      <button class="filter-btn active epic-f" onclick="setFilter('epic','all',this)">All rides</button>
-      <button class="filter-btn" onclick="setFilter('epic','low',this)">Short wait</button>
-      <button class="filter-btn" onclick="setFilter('epic','open',this)">Open only</button>
-      <button class="filter-btn" onclick="setFilter('epic','plan',this)">In your plan</button>
-    </div>
-    <div id="epic-rides"><div class="loading-msg">Tap "Refresh" to load live wait times from Epic Universe</div></div>
-
-    <div class="plan-section">
-      <div class="plan-header">Your Day 2 Itinerary — with live waits</div>
-      <div class="itinerary" id="epic-itinerary"></div>
-    </div>
-    <div class="powered"><a href="https://queue-times.com/en-US" target="_blank">Powered by Queue-Times.com</a></div>
-  </div>
-</div>
-
+<!-- Leaflet JS — interactive map, no API key, works locally + Safari -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const PARK_IDS = { mk: 6, epic: 481 };
-const activePanel = { current: 'mk' };
-const filters = { mk: 'all', epic: 'all' };
-const rideData = { mk: [], epic: [] };
+let leafletMap = null;
+let leafletMarker = null;
+let allMarkers = [];
 
-const MK_PLAN_RIDES = [
-  'Seven Dwarfs Mine Train','Peter Pan\'s Flight','Haunted Mansion','Pirates of the Caribbean',
-  'Jungle Cruise','Space Mountain','TRON Lightcycle / Run','Big Thunder Mountain Railroad',
-  'Buzz Lightyear\'s Space Ranger Spin','Splash Mountain'
-];
-const EPIC_PLAN_RIDES = [
-  'Mario Kart: Bowser\'s Challenge','Harry Potter and the Battle at the Ministry',
-  'Monsters Unchained: The Frankenstein Experiment','How to Train Your Dragon: Isle of Berk',
-  'Stardust Racers'
-];
+function initLeafletMap() {
+  if (leafletMap) return;
+  const p = PARKS[curPark];
+  leafletMap = L.map('leaflet-map', {
+    center: [p.lat, p.lng],
+    zoom: 17,
+    zoomControl: true,
+    attributionControl: true
+  });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(leafletMap);
 
-const MK_ITINERARY = [
-  {time:'9:00 AM', title:'Seven Dwarfs Mine Train', desc:'Fantasyland — go here first at rope drop', ride:'Seven Dwarfs Mine Train', highlight:true},
-  {time:'9:30 AM', title:"Peter Pan's Flight", desc:'Fantasyland — short walk from Seven Dwarfs', ride:"Peter Pan's Flight", highlight:true},
-  {time:'10:15 AM', title:'Haunted Mansion', desc:'Liberty Square — iconic dark ride, great for everyone', ride:'Haunted Mansion'},
-  {time:'10:45 AM', title:'Pirates of the Caribbean', desc:'Adventureland — dad\'s favorite type of ride', ride:'Pirates of the Caribbean'},
-  {time:'11:15 AM', title:'Jungle Cruise', desc:'Adventureland — funny narrated boat tour', ride:'Jungle Cruise'},
-  {time:'12:30 PM', title:'Lunch', desc:'Be Our Guest or Columbia Harbour House', ride:null},
-  {time:'1:30 PM', title:'TRON Lightcycle / Run', desc:'Tomorrowland — best ride in park, use Lightning Lane', ride:'TRON Lightcycle / Run', highlight:true},
-  {time:'2:15 PM', title:'Space Mountain', desc:'Tomorrowland — classic indoor coaster', ride:'Space Mountain'},
-  {time:'3:30 PM', title:'Big Thunder Mountain Railroad', desc:'Frontierland — mild coaster, fun for all', ride:'Big Thunder Mountain Railroad'},
-  {time:'5:00 PM', title:'Dinner', desc:'Skipper Canteen or Crystal Palace', ride:null},
-  {time:'8:30 PM', title:'Grab your spot on Main Street', desc:'Get a good view of Cinderella Castle', ride:null, highlight:true},
-  {time:'9:00 PM', title:'Happily Ever After Fireworks', desc:'Best fireworks show at any theme park — do NOT miss!', ride:null, highlight:true},
-];
-
-const EPIC_ITINERARY = [
-  {time:'10:00 AM', title:'Mario Kart: Bowser\'s Challenge', desc:'Super Nintendo World — head here first at opening', ride:"Mario Kart: Bowser's Challenge", highlight:true},
-  {time:'11:00 AM', title:'Explore Nintendo World', desc:'Collect coins with Power-Up Band, meet characters', ride:null},
-  {time:'11:30 AM', title:'Harry Potter: Battle at the Ministry', desc:'Ministry of Magic — next most popular', ride:"Harry Potter and the Battle at the Ministry", highlight:true},
-  {time:'12:30 PM', title:'Explore Parisian streets', desc:'Dad explores 1920s Paris while others browse shops', ride:null},
-  {time:'1:00 PM', title:'Lunch', desc:'Café L\'Air de la Sirène or Das Steakhaus', ride:null},
-  {time:'2:30 PM', title:'How to Train Your Dragon', desc:'Isle of Berk — dragon coaster + live shows', ride:"How to Train Your Dragon: Isle of Berk"},
-  {time:'3:30 PM', title:'Monsters Unchained', desc:'Dark Universe — intense thrill ride', ride:"Monsters Unchained: The Frankenstein Experiment"},
-  {time:'4:30 PM', title:'Explore Dark Universe', desc:'Gothic architecture + monster makeup experience ($45)', ride:null},
-  {time:'5:30 PM', title:'Dinner', desc:'Das Steakhaus or Mead Hall', ride:null},
-  {time:'7:00 PM', title:'Stardust Racers', desc:'Celestial Park — ride at lower evening wait times', ride:'Stardust Racers'},
-  {time:'8:00 PM', title:'Celestial Park at dusk', desc:'The central hub transforms beautifully at night', ride:null, highlight:true},
-];
-
-function showPanel(park, btn) {
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active-mk','active-epic')});
-  document.getElementById('panel-'+park).classList.add('active');
-  btn.classList.add(park==='mk'?'active-mk':'active-epic');
-  activePanel.current = park;
+  // Plot all known ride markers for current park
+  plotParkMarkers();
 }
 
-function setFilter(park, f, btn) {
-  filters[park] = f;
-  btn.closest('.filter-row').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active','epic-f'));
-  btn.classList.add('active');
-  if(park==='epic') btn.classList.add('epic-f');
-  renderRides(park);
+function plotParkMarkers() {
+  // clear old markers
+  allMarkers.forEach(m => leafletMap.removeLayer(m));
+  allMarkers = [];
+
+  const p = PARKS[curPark];
+  const parkColor = curPark === 'mk' ? '#1a56a0' : '#6433c0';
+
+  Object.entries(COORDS).forEach(([name, coords]) => {
+    const meta = META[name] || {};
+    // Only show markers for current park (rough bbox check)
+    const isMK = coords[0] < 28.425 && coords[1] < -81.57;
+    const isEpic = coords[0] > 28.435 || coords[1] > -81.46;
+    if (curPark === 'mk' && !isMK) return;
+    if (curPark === 'epic' && !isEpic) return;
+
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        background:${meta.plan ? parkColor : '#fff'};
+        color:${meta.plan ? '#fff' : parkColor};
+        border:2px solid ${parkColor};
+        border-radius:50%;width:12px;height:12px;
+        box-shadow:0 1px 4px rgba(0,0,0,.3);
+        cursor:pointer;
+      "></div>`,
+      iconSize: [12, 12],
+      iconAnchor: [6, 6]
+    });
+
+    const marker = L.marker(coords, {icon})
+      .addTo(leafletMap)
+      .bindPopup(`<strong style="font-size:13px">${name}</strong><br><span style="font-size:11px;color:#666">${meta.land||''}</span><br><span style="font-size:11px">${meta.tip||''}</span>`, {maxWidth: 200});
+
+    marker.on('click', () => {
+      onRideTap(name, coords);
+    });
+    allMarkers.push(marker);
+  });
 }
 
-function waitClass(wait, open) {
-  if(!open || wait===0) return 'wait-closed';
-  if(wait<30) return 'wait-low';
-  if(wait<60) return 'wait-mid';
-  return 'wait-high';
-}
+function updateLeafletMap(lat, lng, name) {
+  if (!leafletMap) { initLeafletMap(); }
 
-function waitText(wait, open) {
-  if(!open) return 'Closed';
-  if(wait===0) return 'Walk on';
-  return wait+' min';
-}
+  // Remove old selected marker
+  if (leafletMarker) { leafletMap.removeLayer(leafletMarker); }
 
-function isInPlan(name, park) {
-  const list = park==='mk' ? MK_PLAN_RIDES : EPIC_PLAN_RIDES;
-  return list.some(r=>name.toLowerCase().includes(r.toLowerCase().slice(0,10)));
-}
+  const p = PARKS[curPark];
+  const color = curPark === 'mk' ? '#1a56a0' : '#6433c0';
 
-function renderRides(park) {
-  const search = document.getElementById(park+'-search').value.toLowerCase();
-  const filter = filters[park];
-  const data = rideData[park];
-  const container = document.getElementById(park+'-rides');
-  if(!data.length){container.innerHTML='<div class="loading-msg">No data yet — tap Refresh</div>';return;}
-
-  const allRides = data.flatMap(land=>
-    land.rides.map(r=>({...r, land:land.name}))
-  );
-
-  let filtered = allRides;
-  if(search) filtered=filtered.filter(r=>r.name.toLowerCase().includes(search));
-  if(filter==='low') filtered=filtered.filter(r=>r.is_open && r.wait_time<30);
-  if(filter==='open') filtered=filtered.filter(r=>r.is_open);
-  if(filter==='plan') filtered=filtered.filter(r=>isInPlan(r.name,park));
-
-  const byLand = {};
-  filtered.forEach(r=>{
-    if(!byLand[r.land]) byLand[r.land]=[];
-    byLand[r.land].push(r);
+  // Add big selected marker
+  const selectedIcon = L.divIcon({
+    className: '',
+    html: `<div style="
+      background:${color};color:#fff;
+      border:3px solid #fff;border-radius:50%;
+      width:22px;height:22px;
+      display:flex;align-items:center;justify-content:center;
+      font-size:11px;font-weight:700;
+      box-shadow:0 2px 8px rgba(0,0,0,.4);
+    ">★</div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
   });
 
-  if(!filtered.length){container.innerHTML='<div class="loading-msg">No rides match this filter</div>';return;}
+  leafletMarker = L.marker([lat, lng], {icon: selectedIcon, zIndexOffset: 1000})
+    .addTo(leafletMap)
+    .bindPopup(`<strong>${name}</strong>`, {maxWidth:180})
+    .openPopup();
 
-  container.innerHTML = Object.entries(byLand).map(([land,rides])=>`
-    <div class="land-section">
-      <div class="land-name">${land}</div>
-      <div class="rides-grid">
-        ${rides.map(r=>`
-          <div class="ride-row">
-            <div class="ride-left">
-              <span class="ride-name">${r.name}</span>
-              ${isInPlan(r.name,park)?`<span class="plan-tag ${park==='epic'?'epic':''}">In your plan</span>`:''}
-            </div>
-            <span class="wait-badge ${waitClass(r.wait_time,r.is_open)}">${waitText(r.wait_time,r.is_open)}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `).join('');
+  leafletMap.flyTo([lat, lng], 18, { animate: true, duration: 0.8 });
 }
 
-function renderStats(park) {
-  const data = rideData[park];
-  const allRides = data.flatMap(l=>l.rides);
-  const open = allRides.filter(r=>r.is_open);
-  const low = open.filter(r=>r.wait_time<30).length;
-  const high = open.filter(r=>r.wait_time>=60).length;
-  const avg = open.length ? Math.round(open.reduce((s,r)=>s+r.wait_time,0)/open.length) : 0;
-  document.getElementById(park+'-stats').innerHTML=`
-    <span class="stat-pill pill-gray">${open.length}/${allRides.length} rides open</span>
-    <span class="stat-pill pill-green">${low} short waits</span>
-    <span class="stat-pill ${high>5?'pill-red':'pill-amber'}">${high} long waits</span>
-    <span class="stat-pill pill-gray">Avg: ${avg} min</span>
-  `;
+function resetLeafletMap(lat, lng) {
+  if (!leafletMap) { initLeafletMap(); return; }
+  if (leafletMarker) { leafletMap.removeLayer(leafletMarker); leafletMarker = null; }
+  plotParkMarkers();
+  leafletMap.flyTo([lat, lng], 17, { animate: true, duration: 0.8 });
 }
 
-function renderItinerary(park) {
-  const items = park==='mk' ? MK_ITINERARY : EPIC_ITINERARY;
-  const allRides = rideData[park].flatMap(l=>l.rides);
-  const container = document.getElementById(park+'-itinerary');
-  const isEpic = park==='epic';
-
-  container.innerHTML = items.map(item=>{
-    let waitHtml='';
-    if(item.ride && allRides.length) {
-      const match = allRides.find(r=>r.name.toLowerCase().includes(item.ride.toLowerCase().slice(0,12)));
-      if(match){
-        const wc = waitClass(match.wait_time, match.is_open);
-        const wt = waitText(match.wait_time, match.is_open);
-        const cls = wc==='wait-low'?'':'wait-live '+(wc==='wait-mid'?'mid':'high');
-        waitHtml=`<div class="itin-wait wait-live ${cls}">Live wait: ${wt}</div>`;
-      }
-    }
-    return `
-      <div class="itin-row ${item.highlight?(isEpic?'highlight epic-h':'highlight'):''}">
-        <div class="itin-time">${item.time}</div>
-        <div class="itin-content">
-          <div class="itin-title">${item.title}</div>
-          <div class="itin-desc">${item.desc}</div>
-          ${waitHtml}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function loadWaitTimes(park) {
-  const id = PARK_IDS[park];
-  const updEl = document.getElementById(park+'-updated');
-  const ridesEl = document.getElementById(park+'-rides');
-  updEl.textContent = 'Loading...';
-  ridesEl.innerHTML='<div class="loading-msg">Fetching live wait times...</div>';
-
-  try {
-    const res = await fetch(`https://queue-times.com/parks/${id}/queue_times.json`);
-    if(!res.ok) throw new Error('API error');
-    const json = await res.json();
-    rideData[park] = json.lands || [];
-    if(json.rides && json.rides.length) {
-      rideData[park].push({name:'Other Attractions', rides:json.rides});
-    }
-    const now = new Date();
-    updEl.textContent = 'Updated '+now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
-    renderStats(park);
-    renderRides(park);
-    renderItinerary(park);
-  } catch(e) {
-    ridesEl.innerHTML=`<div class="error-msg">
-      Could not load live wait times. This may be because the park is currently closed or the API is temporarily unavailable.<br><br>
-      Check live waits directly at <a href="https://queue-times.com/en-US/parks/${id}/queue_times" target="_blank">Queue-Times.com</a> or the 
-      <a href="https://disneyworld.disney.go.com/en_CA/experience-updates/magic-kingdom/" target="_blank">My Disney Experience app</a>.
-    </div>`;
-    updEl.textContent='Failed to load';
+// Init map when Map tab is first tapped
+const origShowScreen = showScreen;
+window.showScreen = function(s, btn) {
+  origShowScreen(s, btn);
+  if (s === 'map') {
+    setTimeout(() => {
+      initLeafletMap();
+      leafletMap.invalidateSize();
+    }, 100);
   }
-}
-
-renderItinerary('mk');
-renderItinerary('epic');
+};
 </script>
+</body>
+</html>
