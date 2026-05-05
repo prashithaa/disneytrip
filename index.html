@@ -1,66 +1,809 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Orlando Planner">
+<title>Orlando Trip Planner</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{
-    --mk:#1a56a0;--mk-light:#e6f1fb;--epic:#6c3fc7;--epic-light:#eeedfe;
-    --green:#1D9E75;--green-light:#E1F5EE;--amber:#BA7517;--amber-light:#FAEEDA;
-    --red:#A32D2D;--red-light:#FCEBEB;
+/* ── RESET & SAFARI FIXES ── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:-webkit-fill-available}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+  background:#f2f1ed;color:#1a1a18;
+  min-height:100vh;min-height:-webkit-fill-available;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+button{-webkit-appearance:none;appearance:none;font-family:inherit}
+input{-webkit-appearance:none;appearance:none;font-family:inherit;font-size:16px!important}/* prevent iOS zoom */
+
+/* ── VARIABLES ── */
+:root{
+  --mk:#1a56a0;--mk-l:#ddeaf9;
+  --epic:#6433c0;--epic-l:#ede9fb;
+  --green:#1a8f65;--green-l:#d9f2e8;
+  --amber:#b06c0f;--amber-l:#faebd4;
+  --red:#9e2a2a;--red-l:#fce8e8;
+  --border:#e0ded8;--bg:#f2f1ed;--card:#fff;
+  --text:#1a1a18;--muted:#666461;--subtle:#9e9c98;
+  --safe-top:env(safe-area-inset-top);
+  --safe-bot:env(safe-area-inset-bottom);
+}
+
+/* ── APP SHELL ── */
+.shell{
+  display:flex;flex-direction:column;
+  height:100vh;height:-webkit-fill-available;
+  overflow:hidden;position:relative;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  background:#fff;border-bottom:1px solid var(--border);
+  padding:10px 16px;padding-top:calc(10px + var(--safe-top));
+  flex-shrink:0;z-index:200;
+}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.logo-row{display:flex;align-items:center;gap:8px}
+.logo-icon{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;background:linear-gradient(135deg,var(--mk),var(--epic));
+  flex-shrink:0;
+}
+.logo-text{font-size:15px;font-weight:700;line-height:1.2}
+.logo-sub{font-size:11px;color:var(--muted)}
+
+/* park toggle pills */
+.park-toggle{display:flex;gap:3px;background:var(--bg);padding:3px;border-radius:22px;flex-shrink:0}
+.ptab{
+  padding:6px 12px;border-radius:18px;border:none;cursor:pointer;
+  font-size:12px;font-weight:600;background:transparent;color:var(--muted);
+  transition:all .2s;white-space:nowrap;
+}
+.ptab.mk-on{background:var(--mk);color:#fff}
+.ptab.epic-on{background:var(--epic);color:#fff}
+
+/* ── BOTTOM NAV (mobile primary nav) ── */
+.bottomnav{
+  display:flex;background:#fff;border-top:1px solid var(--border);
+  flex-shrink:0;padding-bottom:var(--safe-bot);z-index:200;
+}
+.bnav{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:8px 4px;border:none;background:transparent;cursor:pointer;
+  color:var(--subtle);font-size:10px;font-weight:500;gap:3px;
+  -webkit-tap-highlight-color:transparent;
+}
+.bnav-icon{font-size:20px;line-height:1}
+.bnav.mk-active{color:var(--mk)}
+.bnav.epic-active{color:var(--epic)}
+
+/* ── MAIN CONTENT AREA ── */
+.main{flex:1;overflow:hidden;position:relative}
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;
+  opacity:0;pointer-events:none;transform:translateY(8px);
+  transition:opacity .2s,transform .2s;
+}
+.screen.active{opacity:1;pointer-events:all;transform:none}
+
+/* ── SHARED SCREEN STYLES ── */
+.screen-header{
+  padding:12px 16px;background:#fff;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.screen-title{font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.screen-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.scroll-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px}
+
+/* ── STATS ROW ── */
+.stats-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.stat{font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px}
+.sg{background:var(--green-l);color:#0a5c3a}
+.sa{background:var(--amber-l);color:#7a4a08}
+.sr{background:var(--red-l);color:#6e1c1c}
+.sb{background:var(--bg);color:var(--muted)}
+
+/* ── SEARCH & FILTERS ── */
+.search-bar{
+  padding:10px 16px;background:#fff;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.search-input{
+  width:100%;padding:9px 14px;border:1px solid var(--border);
+  border-radius:22px;font-size:16px;background:var(--bg);color:var(--text);
+  outline:none;
+}
+.search-input:focus{border-color:var(--mk)}
+.filter-bar{
+  padding:8px 16px;background:#fff;border-bottom:1px solid var(--border);
+  flex-shrink:0;display:flex;gap:6px;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+.filter-bar::-webkit-scrollbar{display:none}
+.filt{
+  padding:5px 13px;border-radius:18px;border:1px solid var(--border);
+  background:transparent;cursor:pointer;font-size:12px;font-weight:500;
+  color:var(--muted);white-space:nowrap;flex-shrink:0;
+}
+.filt.f-mk{background:var(--mk-l);color:var(--mk);border-color:var(--mk)}
+.filt.f-epic{background:var(--epic-l);color:var(--epic);border-color:var(--epic)}
+
+/* ── RIDE CARDS ── */
+.land-label{
+  font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--subtle);
+  padding:6px 4px 4px;
+}
+.ride-card{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 12px;border-radius:12px;border:1px solid var(--border);
+  background:var(--card);margin-bottom:6px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  active-state:opacity:0.7;
+}
+.ride-card:active{opacity:.75}
+.ride-card.sel-mk{border-color:var(--mk);background:var(--mk-l)}
+.ride-card.sel-epic{border-color:var(--epic);background:var(--epic-l)}
+.ride-left{flex:1;min-width:0}
+.ride-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ride-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ride-tags{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 7px;border-radius:8px;font-weight:500}
+.t-thrill{background:#faebd4;color:#7a4a08}
+.t-gentle{background:var(--green-l);color:#0a5c3a}
+.t-show{background:var(--epic-l);color:#3d1f8a}
+.t-dad{background:#e8f5e0;color:#2a5c10}
+.t-plan{background:#fff3cd;color:#7a5800}
+.wait-chip{
+  font-size:13px;font-weight:700;padding:4px 10px;
+  border-radius:12px;min-width:64px;text-align:center;flex-shrink:0;
+}
+.wl{background:var(--green-l);color:#0a5c3a}
+.wm{background:var(--amber-l);color:#7a4a08}
+.wh{background:var(--red-l);color:#6e1c1c}
+.wc{background:var(--bg);color:var(--subtle)}
+.map-btn{
+  background:#fff;border:1px solid var(--border);border-radius:10px;
+  padding:6px 10px;font-size:12px;font-weight:600;color:var(--mk);
+  cursor:pointer;flex-shrink:0;white-space:nowrap;
+}
+.map-btn.epic-mb{color:var(--epic)}
+.map-btn:active{opacity:.7}
+.in-plan-star{color:#f5a623;font-size:14px;margin-left:2px}
+
+/* ── ITINERARY ── */
+.itin-card{
+  display:flex;gap:12px;padding:12px;
+  border-radius:12px;border:1px solid var(--border);
+  background:var(--card);margin-bottom:8px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.itin-card:active{opacity:.75}
+.itin-card.hl-mk{border-color:var(--mk);background:var(--mk-l);border-width:1.5px}
+.itin-card.hl-epic{border-color:var(--epic);background:var(--epic-l);border-width:1.5px}
+.itin-time{font-size:11px;font-weight:700;color:var(--subtle);min-width:52px;padding-top:1px}
+.itin-body{flex:1}
+.itin-title{font-size:14px;font-weight:600}
+.itin-desc{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+.itin-wait{font-size:12px;font-weight:700;margin-top:4px}
+.iw-l{color:var(--green)}.iw-m{color:var(--amber)}.iw-h{color:var(--red)}.iw-c{color:var(--subtle)}
+.itin-nav-btn{
+  margin-top:6px;display:inline-block;font-size:12px;font-weight:600;
+  color:var(--mk);background:transparent;border:none;cursor:pointer;
+  padding:0;text-decoration:underline;text-underline-offset:2px;
+}
+.itin-nav-btn.epic-nav{color:var(--epic)}
+
+/* ── MAP SCREEN ── */
+.map-container{flex:1;position:relative;overflow:hidden}
+.map-iframe{width:100%;height:100%;border:none;display:block}
+.map-card{
+  position:absolute;bottom:16px;left:12px;right:12px;
+  background:#fff;border:1px solid var(--border);
+  border-radius:16px;padding:14px 16px;
+  box-shadow:0 4px 20px rgba(0,0,0,.12);
+  z-index:10;
+}
+.map-card-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.map-card-meta{font-size:12px;color:var(--muted);line-height:1.5}
+.map-card-wait{font-size:13px;font-weight:700;margin:6px 0}
+.open-maps-btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;padding:12px;border-radius:12px;border:none;
+  font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;
+  color:#fff;-webkit-tap-highlight-color:transparent;
+}
+.open-maps-btn:active{opacity:.85}
+.omk{background:var(--mk)}
+.oepic{background:var(--epic)}
+.map-placeholder{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+  background:var(--bg);color:var(--muted);font-size:14px;text-align:center;padding:24px;
+}
+.map-placeholder .big-icon{font-size:48px}
+
+/* ── SUGGESTIONS ── */
+.suggest-group{margin-bottom:20px}
+.suggest-group-title{
+  font-size:12px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.06em;color:var(--subtle);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.suggest-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:12px;padding:12px;margin-bottom:8px;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.suggest-card:active{opacity:.75}
+.suggest-name{font-size:14px;font-weight:600}
+.suggest-why{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+.suggest-bottom{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+
+/* ── LOADING / ERROR ── */
+.loading-msg{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:14px}
+.loading-msg .big{font-size:32px;margin-bottom:8px}
+.error-msg{
+  margin:12px;padding:16px;background:var(--card);border-radius:12px;
+  border:1px solid var(--border);font-size:13px;color:var(--muted);
+  text-align:center;line-height:1.6;
+}
+.error-msg a{color:var(--mk);font-weight:500}
+
+/* ── REFRESH BTN ── */
+.refresh-btn{
+  font-size:13px;font-weight:600;padding:6px 14px;
+  border-radius:16px;border:1.5px solid var(--border);
+  background:transparent;cursor:pointer;color:var(--muted);
+}
+.refresh-btn:active{opacity:.7}
+
+/* ── POWERED ── */
+.powered{text-align:center;padding:8px;font-size:10px;color:var(--subtle);flex-shrink:0}
+.powered a{color:var(--subtle)}
+
+/* ── DESKTOP TWEAKS ── */
+@media(min-width:768px){
+  .shell{flex-direction:column}
+  .bottomnav .bnav-label{display:block}
+  .map-card{left:50%;transform:translateX(-50%);max-width:400px;right:auto;width:calc(100% - 48px)}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="logo-row">
+        <div class="logo-icon">🎢</div>
+        <div>
+          <div class="logo-text">Orlando Planner</div>
+          <div class="logo-sub">Live waits · Map · Navigation</div>
+        </div>
+      </div>
+      <div class="park-toggle">
+        <button class="ptab mk-on" onclick="switchPark('mk',this)">Day 1</button>
+        <button class="ptab" onclick="switchPark('epic',this)">Day 2</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- SCREEN: LIVE WAITS -->
+    <div class="screen active" id="screen-waits">
+      <div class="screen-header">
+        <div class="screen-title">
+          <span id="waits-title">Magic Kingdom — Live Waits</span>
+          <button class="refresh-btn" onclick="loadWaits()">⟳ Refresh</button>
+        </div>
+        <div class="screen-sub" id="last-up">Tap Refresh to load live data</div>
+        <div class="stats-row" id="stats-row"></div>
+      </div>
+      <div class="search-bar">
+        <input class="search-input" type="search" placeholder="Search rides..." oninput="filterRides(this.value)" id="ride-search" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="filter-bar" id="filter-bar">
+        <button class="filt f-mk" onclick="setFilter('all',this)">All rides</button>
+        <button class="filt" onclick="setFilter('short',this)">Short wait</button>
+        <button class="filt" onclick="setFilter('open',this)">Open only</button>
+        <button class="filt" onclick="setFilter('plan',this)">In plan ★</button>
+        <button class="filt" onclick="setFilter('dad',this)">Dad-friendly</button>
+      </div>
+      <div class="scroll-area" id="rides-list">
+        <div class="loading-msg"><div class="big">🎡</div>Tap <strong>Refresh</strong> above to load live wait times</div>
+      </div>
+      <div class="powered"><a href="https://queue-times.com/en-US" target="_blank">Powered by Queue-Times.com</a></div>
+    </div>
+
+    <!-- SCREEN: ITINERARY -->
+    <div class="screen" id="screen-itin">
+      <div class="screen-header">
+        <div class="screen-title" id="itin-title">Day 1 — Magic Kingdom</div>
+        <div class="screen-sub">Tap any stop to navigate on the map</div>
+      </div>
+      <div class="scroll-area" id="itin-list"></div>
+    </div>
+
+    <!-- SCREEN: MAP -->
+    <div class="screen" id="screen-map">
+      <div class="map-container">
+        <iframe id="map-frame" class="map-iframe"
+          src="https://www.openstreetmap.org/export/embed.html?bbox=-81.5870%2C28.4150%2C-81.5750%2C28.4220&layer=mapnik&marker=28.4178%2C-81.5812"
+          allowfullscreen loading="lazy">
+        </iframe>
+        <div class="map-card" id="map-card" style="display:none">
+          <div class="map-card-title" id="mc-title">—</div>
+          <div class="map-card-meta" id="mc-meta"></div>
+          <div class="map-card-wait" id="mc-wait"></div>
+          <button class="open-maps-btn omk" id="mc-nav-btn" onclick="openMapsNav()">
+            Open in Maps for Directions ↗
+          </button>
+        </div>
+        <div class="map-card" id="map-hint" style="background:rgba(255,255,255,.95)">
+          <div style="font-size:14px;font-weight:600;margin-bottom:4px">🗺️ Park Map</div>
+          <div style="font-size:12px;color:var(--muted)">Tap any ride in <strong>Live Waits</strong> or <strong>Itinerary</strong> to zoom here and get navigation.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN: SUGGESTIONS -->
+    <div class="screen" id="screen-suggest">
+      <div class="screen-header">
+        <div class="screen-title">Ride Suggestions</div>
+        <div class="screen-sub">Family of 4 · 1 non-thrill rider (dad)</div>
+      </div>
+      <div class="scroll-area" id="suggest-list"></div>
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- BOTTOM NAV -->
+  <div class="bottomnav">
+    <button class="bnav mk-active" id="bn-waits" onclick="showScreen('waits',this)">
+      <span class="bnav-icon">⏱</span>
+      <span class="bnav-label">Live Waits</span>
+    </button>
+    <button class="bnav" id="bn-itin" onclick="showScreen('itin',this)">
+      <span class="bnav-icon">📋</span>
+      <span class="bnav-label">Itinerary</span>
+    </button>
+    <button class="bnav" id="bn-map" onclick="showScreen('map',this)">
+      <span class="bnav-icon">🗺️</span>
+      <span class="bnav-label">Map</span>
+    </button>
+    <button class="bnav" id="bn-suggest" onclick="showScreen('suggest',this)">
+      <span class="bnav-icon">⭐</span>
+      <span class="bnav-label">Picks</span>
+    </button>
+  </div>
+
+</div><!-- /shell -->
+
+<script>
+// ═══════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════
+const PARKS = {
+  mk:   { id:6,   name:'Magic Kingdom', lat:28.4178, lng:-81.5812, bbox:'-81.5870,28.4150,-81.5750,28.4220', color:'#1a56a0', light:'#ddeaf9', navCls:'omk',    filtOn:'f-mk',   bnCls:'mk-active', tabCls:'mk-on' },
+  epic: { id:481, name:'Epic Universe',  lat:28.4408, lng:-81.4479, bbox:'-81.4570,28.4370,-81.4390,28.4450', color:'#6433c0', light:'#ede9fb', navCls:'oepic', filtOn:'f-epic', bnCls:'epic-active', tabCls:'epic-on' }
+};
+
+const COORDS = {
+  'Seven Dwarfs Mine Train':[28.4199,-81.5820],
+  "Peter Pan's Flight":[28.4198,-81.5826],
+  'Haunted Mansion':[28.4185,-81.5831],
+  'Pirates of the Caribbean':[28.4181,-81.5840],
+  'Jungle Cruise':[28.4184,-81.5842],
+  'Space Mountain':[28.4187,-81.5799],
+  'TRON Lightcycle / Run':[28.4195,-81.5802],
+  'Big Thunder Mountain Railroad':[28.4175,-81.5842],
+  "Tiana's Bayou Adventure":[28.4173,-81.5835],
+  "Buzz Lightyear's Space Ranger Spin":[28.4189,-81.5804],
+  "Dumbo the Flying Elephant":[28.4202,-81.5825],
+  'The Many Adventures of Winnie the Pooh':[28.4201,-81.5818],
+  'Mad Tea Party':[28.4200,-81.5822],
+  'The Hall of Presidents':[28.4183,-81.5828],
+  "Mario Kart: Bowser's Challenge":[28.4425,-81.4495],
+  'Mine Cart Madness':[28.4430,-81.4490],
+  'Harry Potter and the Battle at the Ministry':[28.4395,-81.4460],
+  'Le Cirque Arcanus':[28.4390,-81.4455],
+  'Monsters Unchained: The Frankenstein Experiment':[28.4415,-81.4505],
+  'Stardust Racers':[28.4408,-81.4479],
+  'Constellation Carousel':[28.4405,-81.4472],
+  "Hiccup's Wing Gliders":[28.4400,-81.4510],
+  'Fyre Drill':[28.4398,-81.4515],
+  'The Untrainable Dragon':[28.4395,-81.4510],
+};
+
+const META = {
+  'Seven Dwarfs Mine Train':{tags:['thrill'],land:'Fantasyland',tip:'First ride at rope drop — hits 90min by 10am',plan:true},
+  "Peter Pan's Flight":{tags:['gentle','dad'],land:'Fantasyland',tip:'Classic — go early, lines build fast',plan:true},
+  'Haunted Mansion':{tags:['gentle','dad'],land:'Liberty Square',tip:'Great for everyone, usually manageable',plan:true},
+  'Pirates of the Caribbean':{tags:['gentle','dad'],land:'Adventureland',tip:'Zero thrill — dad will love it',plan:true},
+  'Jungle Cruise':{tags:['gentle','dad'],land:'Adventureland',tip:'Hilarious narrated boat tour',plan:true},
+  'TRON Lightcycle / Run':{tags:['thrill'],land:'Tomorrowland',tip:'Best ride in WDW — use Lightning Lane',plan:true},
+  'Space Mountain':{tags:['thrill'],land:'Tomorrowland',tip:'Classic indoor coaster',plan:true},
+  'Big Thunder Mountain Railroad':{tags:['thrill'],land:'Frontierland',tip:'Mild coaster — the whole family',plan:true},
+  "Tiana's Bayou Adventure":{tags:['gentle','dad'],land:'Frontierland',tip:'Log flume — great in the heat',plan:false},
+  "Buzz Lightyear's Space Ranger Spin":{tags:['gentle','dad'],land:'Tomorrowland',tip:'Interactive shooter, fun for groups',plan:false},
+  "Dumbo the Flying Elephant":{tags:['gentle','dad'],land:'Fantasyland',tip:'Gentle and iconic',plan:false},
+  'The Many Adventures of Winnie the Pooh':{tags:['gentle','dad'],land:'Fantasyland',tip:'Charming gentle dark ride',plan:false},
+  'Mad Tea Party':{tags:['gentle'],land:'Fantasyland',tip:'Spinning teacups, you control the spin',plan:false},
+  'The Hall of Presidents':{tags:['show','dad'],land:'Liberty Square',tip:'AC, fascinating animatronic show',plan:false},
+  "Mario Kart: Bowser's Challenge":{tags:['thrill'],land:'Super Nintendo World',tip:'Go FIRST at park open — longest lines',plan:true},
+  'Mine Cart Madness':{tags:['thrill'],land:'Super Nintendo World',tip:'Donkey Kong coaster — surprisingly fun',plan:false},
+  'Harry Potter and the Battle at the Ministry':{tags:['thrill'],land:'Ministry of Magic',tip:'Next-gen dark ride — jaw dropping',plan:true},
+  'Le Cirque Arcanus':{tags:['show','dad'],land:'Ministry of Magic',tip:'Magical creatures show — great for dad',plan:false},
+  'Monsters Unchained: The Frankenstein Experiment':{tags:['thrill'],land:'Dark Universe',tip:'Intense, genuinely scary in a fun way',plan:true},
+  'Stardust Racers':{tags:['thrill'],land:'Celestial Park',tip:'Dual-track coaster — ride in the evening',plan:true},
+  'Constellation Carousel':{tags:['gentle','dad'],land:'Celestial Park',tip:'Beautiful celestial carousel — all ages',plan:false},
+  "Hiccup's Wing Gliders":{tags:['gentle','dad'],land:'Isle of Berk',tip:'Smooth family coaster — great for dad',plan:false},
+  'Fyre Drill':{tags:['thrill'],land:'Isle of Berk',tip:'Water ride — you WILL get soaked',plan:false},
+  'The Untrainable Dragon':{tags:['show','dad'],land:'Isle of Berk',tip:'Live aerial dragon show — spectacular',plan:false},
+};
+
+const MK_ITIN = [
+  {t:'8:15 AM',title:'Leave Holiday Inn',desc:'~20 min drive or shuttle to Magic Kingdom',ride:null,hl:false},
+  {t:'9:00 AM',title:'Rope drop — Fantasyland',desc:'Head straight to Seven Dwarfs Mine Train',ride:'Seven Dwarfs Mine Train',hl:true},
+  {t:'9:30 AM',title:"Peter Pan's Flight",desc:'Fantasyland — right after Seven Dwarfs',ride:"Peter Pan's Flight",hl:false},
+  {t:'10:15 AM',title:'Haunted Mansion',desc:'Liberty Square — everyone loves this one',ride:'Haunted Mansion',hl:false},
+  {t:'10:45 AM',title:'Pirates of the Caribbean',desc:'Adventureland — perfect for dad',ride:'Pirates of the Caribbean',hl:false},
+  {t:'11:15 AM',title:'Jungle Cruise',desc:'Adventureland — hilarious narrated boat tour',ride:'Jungle Cruise',hl:false},
+  {t:'12:30 PM',title:'Lunch',desc:'Be Our Guest or Columbia Harbour House',ride:null,hl:false},
+  {t:'1:30 PM',title:'TRON Lightcycle / Run',desc:'Tomorrowland — best ride in park, use Lightning Lane',ride:'TRON Lightcycle / Run',hl:true},
+  {t:'2:15 PM',title:'Space Mountain',desc:'Tomorrowland — classic indoor coaster',ride:'Space Mountain',hl:false},
+  {t:'3:30 PM',title:'Big Thunder Mountain',desc:'Frontierland — mild coaster for the group',ride:'Big Thunder Mountain Railroad',hl:false},
+  {t:'5:00 PM',title:'Dinner',desc:'Skipper Canteen or Crystal Palace',ride:null,hl:false},
+  {t:'6:30 PM',title:'Festival of Fantasy Parade',desc:'Main Street USA — floats, characters, music',ride:null,hl:true},
+  {t:'8:30 PM',title:'Claim your Main Street spot',desc:'Position near Cinderella Castle for fireworks',ride:null,hl:true},
+  {t:'9:00 PM',title:'Happily Ever After Fireworks!',desc:'Do NOT miss this — best show at any theme park',ride:null,hl:true},
+];
+
+const EPIC_ITIN = [
+  {t:'9:15 AM',title:'Leave Holiday Inn',desc:'~25 min drive or shuttle to Epic Universe',ride:null,hl:false},
+  {t:'10:00 AM',title:'Enter Celestial Park',desc:'Head immediately to Nintendo World portal',ride:'Stardust Racers',hl:true},
+  {t:'10:05 AM',title:"Mario Kart: Bowser's Challenge",desc:'Super Nintendo World — first ride at opening',ride:"Mario Kart: Bowser's Challenge",hl:true},
+  {t:'11:00 AM',title:'Explore Nintendo World',desc:'Power-Up Band ($45), collect coins, meet characters',ride:null,hl:false},
+  {t:'11:30 AM',title:'Harry Potter: Ministry',desc:'Most popular after Nintendo — go before lunch',ride:'Harry Potter and the Battle at the Ministry',hl:true},
+  {t:'12:30 PM',title:'Explore Paris streets',desc:'Dad enjoys 1920s Paris shopfronts while others browse',ride:null,hl:false},
+  {t:'1:00 PM',title:'Lunch',desc:"Café L'Air de la Sirène or Das Steakhaus",ride:null,hl:false},
+  {t:'2:30 PM',title:'Isle of Berk (HTTYD)',desc:'Dragon coaster + live dragon shows for everyone',ride:"Hiccup's Wing Gliders",hl:false},
+  {t:'3:30 PM',title:'Monsters Unchained',desc:'Dark Universe — intense and thrilling',ride:'Monsters Unchained: The Frankenstein Experiment',hl:false},
+  {t:'5:30 PM',title:'Dinner',desc:'Das Steakhaus or Mead Hall',ride:null,hl:false},
+  {t:'7:00 PM',title:'Stardust Racers',desc:'Evening = short lines on this dual coaster',ride:'Stardust Racers',hl:false},
+  {t:'8:00 PM',title:'Celestial Park at dusk',desc:'The Chronos tower lights up — magical ending to the day',ride:null,hl:true},
+];
+
+const SUGGESTIONS = {
+  mk:{
+    thrill:[
+      {name:'TRON Lightcycle / Run',why:'Fastest coaster in all of WDW. Absolute must-do. Use Lightning Lane to skip the line.',tag:'thrill',ride:'TRON Lightcycle / Run'},
+      {name:'Seven Dwarfs Mine Train',why:'Most beloved ride in the park. Perfect blend of story and coaster. Go at rope drop.',tag:'thrill',ride:'Seven Dwarfs Mine Train'},
+      {name:'Space Mountain',why:'Classic dark indoor coaster. Best in the evening when waits drop.',tag:'thrill',ride:'Space Mountain'},
+      {name:'Big Thunder Mountain Railroad',why:'Fun mild coaster — even borderline for non-thrill riders. Great family ride.',tag:'thrill',ride:'Big Thunder Mountain Railroad'},
+    ],
+    dad:[
+      {name:'Haunted Mansion',why:'Iconic dark ride with zero thrill — spooky atmosphere but completely gentle. Everyone loves this.',tag:'dad',ride:'Haunted Mansion'},
+      {name:'Pirates of the Caribbean',why:'Classic boat ride through pirate scenes. Zero thrill, totally charming.',tag:'dad',ride:'Pirates of the Caribbean'},
+      {name:'Jungle Cruise',why:'Narrated boat tour with genuinely funny dad-joke humor.',tag:'dad',ride:'Jungle Cruise'},
+      {name:"Peter Pan's Flight",why:'Gentle flying dark ride over London. Classic Disney magic.',tag:'dad',ride:"Peter Pan's Flight"},
+      {name:"Tiana's Bayou Adventure",why:'Log flume with gentle drops — great on a hot day, dad-appropriate.',tag:'dad',ride:"Tiana's Bayou Adventure"},
+      {name:'The Hall of Presidents',why:'Air-conditioned animatronic show. Fascinating, peaceful, and a great midday break.',tag:'show',ride:'The Hall of Presidents'},
+    ]
+  },
+  epic:{
+    thrill:[
+      {name:"Mario Kart: Bowser's Challenge",why:"AR racing ride — unlike anything ever built. Go FIRST at park open, lines hit 120min by 11am.",tag:'thrill',ride:"Mario Kart: Bowser's Challenge"},
+      {name:'Harry Potter: Battle at Ministry',why:'Most technologically advanced dark ride in the world. Absolutely stunning.',tag:'thrill',ride:'Harry Potter and the Battle at the Ministry'},
+      {name:'Monsters Unchained',why:'High-intensity dark ride through Universal Classic Monsters. Genuinely scary in the best way.',tag:'thrill',ride:'Monsters Unchained: The Frankenstein Experiment'},
+      {name:'Stardust Racers',why:'Dual-track launched coaster — race a friend on the parallel track. Ride in the evening.',tag:'thrill',ride:'Stardust Racers'},
+      {name:'Mine Cart Madness',why:'Donkey Kong coaster — surprisingly intense and wildly fun.',tag:'thrill',ride:'Mine Cart Madness'},
+      {name:'Fyre Drill',why:'Water ride in Isle of Berk — you WILL get soaked. Perfect for afternoon heat.',tag:'thrill',ride:'Fyre Drill'},
+    ],
+    dad:[
+      {name:"Hiccup's Wing Gliders",why:'Smooth, scenic family coaster through the dragon world. Completely dad-friendly and beautiful.',tag:'dad',ride:"Hiccup's Wing Gliders"},
+      {name:'The Untrainable Dragon',why:'Live aerial show with a real animatronic Toothless. Spectacular, zero thrill.',tag:'show',ride:'The Untrainable Dragon'},
+      {name:'Le Cirque Arcanus',why:'Magical creatures stage show in Ministry of Magic. Impressive for all ages.',tag:'show',ride:'Le Cirque Arcanus'},
+      {name:'Constellation Carousel',why:'Gorgeous celestial-themed carousel in Celestial Park. Beautiful rest stop.',tag:'dad',ride:'Constellation Carousel'},
+    ]
   }
-  body{font-family:var(--font-sans,system-ui,sans-serif);font-size:14px;color:var(--color-text-primary)}
-  .app{max-width:100%;padding:0}
-  .tabs{display:flex;gap:0;border-bottom:0.5px solid var(--color-border-secondary);margin-bottom:1.25rem}
-  .tab{padding:10px 20px;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;color:var(--color-text-secondary);border-bottom:2px solid transparent;transition:all .15s}
-  .tab.active-mk{color:var(--mk);border-bottom-color:var(--mk)}
-  .tab.active-epic{color:var(--epic);border-bottom-color:var(--epic)}
-  .tab:hover{color:var(--color-text-primary)}
-  .panel{display:none}.panel.active{display:block}
-  .live-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
-  .live-title{font-size:15px;font-weight:500}
-  .refresh-btn{font-size:12px;padding:6px 14px;cursor:pointer;border-radius:var(--border-radius-md);background:transparent;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary)}
-  .refresh-btn:hover{background:var(--color-background-secondary)}
-  .last-updated{font-size:11px;color:var(--color-text-secondary)}
-  .status-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1rem}
-  .stat-pill{font-size:12px;padding:4px 12px;border-radius:20px;font-weight:500}
-  .pill-green{background:var(--green-light);color:#085041}
-  .pill-amber{background:var(--amber-light);color:#633806}
-  .pill-red{background:var(--red-light);color:#791F1F}
-  .pill-gray{background:var(--color-background-secondary);color:var(--color-text-secondary)}
-  .search-box{width:100%;padding:8px 12px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text-primary);font-size:13px;margin-bottom:1rem}
-  .lands-container{display:flex;flex-direction:column;gap:1rem}
-  .land-section{}
-  .land-name{font-size:11px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;padding-bottom:4px;border-bottom:0.5px solid var(--color-border-tertiary)}
-  .rides-grid{display:flex;flex-direction:column;gap:4px}
-  .ride-row{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;transition:background .1s}
-  .ride-row:hover{background:var(--color-background-secondary)}
-  .ride-left{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
-  .ride-name{font-size:13px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .plan-tag{font-size:10px;padding:2px 6px;border-radius:10px;background:var(--mk-light);color:var(--mk);white-space:nowrap}
-  .plan-tag.epic{background:var(--epic-light);color:var(--epic)}
-  .wait-badge{font-size:12px;font-weight:500;padding:3px 10px;border-radius:12px;white-space:nowrap;min-width:60px;text-align:center}
-  .wait-low{background:var(--green-light);color:#085041}
-  .wait-mid{background:var(--amber-light);color:#633806}
-  .wait-high{background:var(--red-light);color:#791F1F}
-  .wait-closed{background:var(--color-background-secondary);color:var(--color-text-secondary)}
-  .loading-msg{text-align:center;padding:2rem;color:var(--color-text-secondary);font-size:13px}
-  .error-msg{text-align:center;padding:1.5rem;color:var(--color-text-secondary);font-size:13px;background:var(--color-background-secondary);border-radius:var(--border-radius-lg)}
-  .error-msg a{color:var(--mk);text-decoration:none}
-  .plan-section{margin-top:1.5rem;border-top:0.5px solid var(--color-border-secondary);padding-top:1.25rem}
-  .plan-header{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:.75rem}
-  .itinerary{display:flex;flex-direction:column;gap:6px}
-  .itin-row{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary)}
-  .itin-row.highlight{border-color:var(--mk);background:var(--mk-light)}
-  .itin-row.highlight.epic-h{border-color:var(--epic);background:var(--epic-light)}
-  .itin-time{font-size:11px;font-weight:500;color:var(--color-text-secondary);min-width:60px;padding-top:1px}
-  .itin-content{flex:1}
-  .itin-title{font-size:13px;font-weight:500;color:var(--color-text-primary)}
-  .itin-desc{font-size:12px;color:var(--color-text-secondary);margin-top:2px}
-  .itin-wait{font-size:11px;font-weight:500;margin-top:3px}
-  .wait-live{color:var(--green);} .wait-live.mid{color:var(--amber)} .wait-live.high{color:var(--red)}
-  .legend-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1rem;font-size:11px;color:var(--color-text-secondary)}
-  .legend-item{display:flex;align-items:center;gap:5px}
-  .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-  .powered{font-size:10px;color:var(--color-text-secondary);margin-top:1rem;text-align:center}
-  .powered a{color:var(--color-text-secondary)}
+};
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let curPark='mk', curScreen='waits', curFilter='all';
+let rideData={mk:[],epic:[]};
+let selectedRide=null, selectedCoords=null;
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+function allRides(){ return rideData[curPark].flatMap(l=>l.rides.map(r=>({...r,land:l.name}))); }
+function wCls(w,o){ if(!o||w===0)return'wc'; if(w<30)return'wl'; if(w<60)return'wm'; return'wh'; }
+function wTxt(w,o){ if(!o)return'Closed'; if(w===0)return'Walk on!'; return w+'m'; }
+function isInPlan(n){ return META[n]?.plan||false; }
+function isDad(n){ const t=META[n]?.tags||[]; return t.includes('dad')||t.includes('show'); }
+function tagLabel(t){ return t==='dad'?'Dad-friendly':t==='show'?'Show':t; }
+function tagCls(t){ return t==='thrill'?'t-thrill':t==='gentle'?'t-gentle':t==='show'?'t-show':'t-dad'; }
+
+// ═══════════════════════════════════════
+// PARK SWITCH
+// ═══════════════════════════════════════
+function switchPark(park,btn){
+  curPark=park; curFilter='all'; selectedRide=null; selectedCoords=null;
+  const p=PARKS[park];
+
+  // toggle buttons
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('mk-on','epic-on'));
+  btn.classList.add(p.tabCls);
+
+  // update bottom nav active color
+  document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('mk-active','epic-active'));
+  document.getElementById('bn-'+curScreen).classList.add(p.bnCls);
+
+  // filters
+  document.querySelectorAll('.filt').forEach(f=>f.classList.remove('f-mk','f-epic'));
+  document.querySelector('.filt').classList.add(p.filtOn);
+
+  // titles
+  document.getElementById('waits-title').textContent=p.name+' — Live Waits';
+  document.getElementById('itin-title').textContent=(park==='mk'?'Day 1':'Day 2')+' — '+p.name;
+
+  // map reset
+  const p2=PARKS[park];
+  document.getElementById('map-frame').src=
+    `https://www.openstreetmap.org/export/embed.html?bbox=${p2.bbox}&layer=mapnik&marker=${p2.lat},${p2.lng}`;
+  document.getElementById('map-card').style.display='none';
+  document.getElementById('map-hint').style.display='block';
+  document.getElementById('mc-nav-btn').className='open-maps-btn '+p.navCls;
+
+  renderRides(); renderItin(); renderSuggest();
+}
+
+// ═══════════════════════════════════════
+// SCREENS
+// ═══════════════════════════════════════
+function showScreen(s,btn){
+  curScreen=s;
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('screen-'+s).classList.add('active');
+  document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('mk-active','epic-active'));
+  btn.classList.add(PARKS[curPark].bnCls);
+}
+
+// ═══════════════════════════════════════
+// WAIT TIMES
+// ═══════════════════════════════════════
+async function loadWaits(){
+  const el=document.getElementById('rides-list');
+  const up=document.getElementById('last-up');
+  el.innerHTML='<div class="loading-msg"><div class="big">⏳</div>Loading live wait times...</div>';
+  up.textContent='Loading...';
+  try{
+    const r=await fetch(`https://queue-times.com/parks/${PARKS[curPark].id}/queue_times.json`);
+    if(!r.ok) throw new Error();
+    const j=await r.json();
+    rideData[curPark]=j.lands||[];
+    if(j.rides?.length) rideData[curPark].push({name:'Other',rides:j.rides});
+    up.textContent='Updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    renderStats(); renderRides(); renderItin();
+  }catch(e){
+    const pid=PARKS[curPark].id;
+    el.innerHTML=`<div class="error-msg">
+      Could not load live data — park may be closed right now.<br><br>
+      <a href="https://queue-times.com/en-US/parks/${pid}/queue_times" target="_blank">View on Queue-Times.com ↗</a>
+    </div>`;
+    up.textContent='Failed to load';
+  }
+}
+
+function renderStats(){
+  const all=allRides(), open=all.filter(r=>r.is_open);
+  const low=open.filter(r=>r.wait_time<30).length;
+  const hi=open.filter(r=>r.wait_time>=60).length;
+  const avg=open.length?Math.round(open.reduce((s,r)=>s+r.wait_time,0)/open.length):0;
+  document.getElementById('stats-row').innerHTML=
+    `<span class="stat sb">${open.length}/${all.length} open</span>`+
+    `<span class="stat sg">${low} short</span>`+
+    `<span class="stat ${hi>5?'sr':'sa'}">${hi} long</span>`+
+    `<span class="stat sb">Avg ${avg}m</span>`;
+}
+
+function setFilter(f,btn){
+  curFilter=f;
+  const p=PARKS[curPark];
+  document.querySelectorAll('.filt').forEach(b=>b.classList.remove('f-mk','f-epic'));
+  btn.classList.add(p.filtOn);
+  renderRides();
+}
+function filterRides(q){ renderRides(q); }
+
+function renderRides(sq){
+  const el=document.getElementById('rides-list');
+  if(!rideData[curPark].length){
+    el.innerHTML='<div class="loading-msg"><div class="big">🎡</div>Tap <strong>Refresh</strong> above to load live wait times</div>';
+    return;
+  }
+  const q=(sq||document.getElementById('ride-search').value||'').toLowerCase();
+  const p=PARKS[curPark];
+  const lands=rideData[curPark].map(land=>({
+    ...land,
+    rides:land.rides.filter(r=>{
+      if(q&&!r.name.toLowerCase().includes(q)) return false;
+      if(curFilter==='short') return r.is_open&&r.wait_time<30;
+      if(curFilter==='open') return r.is_open;
+      if(curFilter==='plan') return isInPlan(r.name);
+      if(curFilter==='dad') return isDad(r.name);
+      return true;
+    })
+  })).filter(l=>l.rides.length);
+  if(!lands.length){el.innerHTML='<div class="loading-msg">No rides match this filter</div>';return;}
+  const isSel=n=>selectedRide===n?(curPark==='mk'?'sel-mk':'sel-epic'):'';
+  el.innerHTML=lands.map(land=>`
+    <div class="land-label">${land.name}</div>
+    ${land.rides.map(r=>{
+      const m=META[r.name]||{};
+      const coords=COORDS[r.name];
+      const tags=(m.tags||[]).map(t=>`<span class="tag ${tagCls(t)}">${tagLabel(t)}</span>`).join('');
+      const plan=m.plan?'<span class="in-plan-star">★</span>':'';
+      return `<div class="ride-card ${isSel(r.name)}" onclick="onRideTap(${JSON.stringify(r.name)},${JSON.stringify(coords||null)})">
+        <div class="ride-left">
+          <div class="ride-name">${r.name}${plan}</div>
+          ${m.tip?`<div class="ride-meta">${m.tip}</div>`:''}
+          <div class="ride-tags">${tags}</div>
+        </div>
+        <span class="wait-chip ${wCls(r.wait_time,r.is_open)}">${wTxt(r.wait_time,r.is_open)}</span>
+        ${coords?`<button class="map-btn ${curPark==='epic'?'epic-mb':''}" onclick="event.stopPropagation();openMap(${JSON.stringify(r.name)},${JSON.stringify(coords)})">Map</button>`:''}
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// RIDE SELECT + MAP
+// ═══════════════════════════════════════
+function onRideTap(name,coords){
+  selectedRide=name; selectedCoords=coords;
+  renderRides();
+  if(coords) openMap(name,coords);
+}
+
+function openMap(name,coords){
+  selectedRide=name; selectedCoords=coords;
+  const m=META[name]||{};
+  const p=PARKS[curPark];
+  const live=allRides().find(r=>r.name===name);
+
+  // update map card
+  document.getElementById('mc-title').textContent=name;
+  document.getElementById('mc-meta').innerHTML=
+    (m.land?`<strong>${m.land}</strong><br>`:'')+(m.tip||'');
+  if(live){
+    const wc=wCls(live.wait_time,live.is_open);
+    const col=wc==='wl'?'var(--green)':wc==='wm'?'var(--amber)':'var(--red)';
+    document.getElementById('mc-wait').innerHTML=
+      `<span style="color:${col}">Live wait: ${wTxt(live.wait_time,live.is_open)}</span>`;
+  } else {
+    document.getElementById('mc-wait').textContent='';
+  }
+  document.getElementById('mc-nav-btn').className='open-maps-btn '+p.navCls;
+  document.getElementById('map-card').style.display='block';
+  document.getElementById('map-hint').style.display='none';
+
+  // update iframe — OpenStreetMap (no API key needed, works on all browsers)
+  const zoom=18;
+  const half=0.002;
+  const bbox=`${coords[1]-half},${coords[0]-half},${coords[1]+half},${coords[0]+half}`;
+  document.getElementById('map-frame').src=
+    `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${coords[0]},${coords[1]}`;
+
+  // switch to map screen
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-map').classList.add('active');
+  document.querySelectorAll('.bnav').forEach(b=>b.classList.remove('mk-active','epic-active'));
+  document.getElementById('bn-map').classList.add(PARKS[curPark].bnCls);
+  curScreen='map';
+}
+
+function openMapsNav(){
+  if(!selectedCoords) return;
+  // On iOS Safari, open Apple Maps with walking directions
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const url = isIOS
+    ? `maps://maps.apple.com/?daddr=${selectedCoords[0]},${selectedCoords[1]}&dirflg=w`
+    : `https://www.google.com/maps/dir/?api=1&destination=${selectedCoords[0]},${selectedCoords[1]}&travelmode=walking`;
+  window.open(url,'_blank');
+}
+
+// ═══════════════════════════════════════
+// ITINERARY
+// ═══════════════════════════════════════
+function renderItin(){
+  const list=curPark==='mk'?MK_ITIN:EPIC_ITIN;
+  const rides=allRides();
+  const p=PARKS[curPark];
+  document.getElementById('itin-list').innerHTML=list.map(item=>{
+    let wHtml='',navHtml='';
+    const c=item.ride?COORDS[item.ride]:null;
+    if(item.ride&&rides.length){
+      const r=rides.find(r=>r.name.toLowerCase().includes(item.ride.toLowerCase().slice(0,14)));
+      if(r){
+        const wc=wCls(r.wait_time,r.is_open);
+        const col=wc==='wl'?'iw-l':wc==='wm'?'iw-m':wc==='wh'?'iw-h':'iw-c';
+        wHtml=`<div class="itin-wait ${col}">Live: ${wTxt(r.wait_time,r.is_open)}</div>`;
+      }
+    }
+    if(c){
+      navHtml=`<button class="itin-nav-btn ${curPark==='epic'?'epic-nav':''}" onclick="event.stopPropagation();openMap(${JSON.stringify(item.ride||'')},${JSON.stringify(c)})">View on map ↗</button>`;
+    }
+    const hl=item.hl?(curPark==='mk'?'hl-mk':'hl-epic'):'';
+    return `<div class="itin-card ${hl}" onclick="${c?`openMap(${JSON.stringify(item.ride||item.title)},${JSON.stringify(c)})`:''}">
+      <div class="itin-time">${item.t}</div>
+      <div class="itin-body">
+        <div class="itin-title">${item.title}</div>
+        <div class="itin-desc">${item.desc}</div>
+        ${wHtml}${navHtml}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// SUGGESTIONS
+// ═══════════════════════════════════════
+function renderSuggest(){
+  const data=SUGGESTIONS[curPark];
+  const rides=allRides();
+  const p=PARKS[curPark];
+  function card(r){
+    const c=COORDS[r.ride];
+    const live=rides.find(lr=>lr.name.toLowerCase().includes(r.ride.toLowerCase().slice(0,12)));
+    const wHtml=live?`<span class="wait-chip ${wCls(live.wait_time,live.is_open)}" style="font-size:12px;padding:3px 8px">${wTxt(live.wait_time,live.is_open)}</span>`:'';
+    const tCls=r.tag==='thrill'?'t-thrill':r.tag==='dad'?'t-dad':'t-show';
+    return `<div class="suggest-card" onclick="${c?`openMap(${JSON.stringify(r.ride)},${JSON.stringify(c)})`:''}">
+      <div class="suggest-name">${r.name}</div>
+      <div class="suggest-why">${r.why}</div>
+      <div class="suggest-bottom">
+        <span class="tag ${tCls}">${tagLabel(r.tag)}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${wHtml}
+          ${c?`<span style="font-size:12px;color:${p.color};font-weight:600">Map ↗</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('suggest-list').innerHTML=`
+    <div class="suggest-group">
+      <div class="suggest-group-title">🎢 Top Thrills</div>
+      ${data.thrill.map(card).join('')}
+    </div>
+    <div class="suggest-group">
+      <div class="suggest-group-title">😊 Best for Dad (gentle / no thrill)</div>
+      ${data.dad.map(card).join('')}
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+renderItin();
+renderSuggest();
+</script>
+</body>
+</html>  .powered a{color:var(--color-text-secondary)}
   .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
   .filter-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer}
   .filter-btn.active{background:var(--mk-light);color:var(--mk);border-color:var(--mk)}
